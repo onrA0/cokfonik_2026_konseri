@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Koro Repertuar Player</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent-color: #ff6d00; 
+            --text-color: #ffffff;
+        }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: -webkit-fill-available; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-color); color: var(--text-color); overflow: hidden; }
+        body { display: flex; flex-direction: column; }
+
+        #countdown-bar { background: linear-gradient(90deg, #ff6d00, #ffab40); color: #000000; text-align: center; padding: 8px 5px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10; flex-shrink: 0; }
+        #countdown-bar span { color: #000000; font-size: 15px; }
+
+        #app-container { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
+        #sidebar { width: 320px; background: var(--panel-bg); border-right: 1px solid #333; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; height: 100%; flex-shrink: 0; }
+        
+        .parti-secici { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; flex-shrink: 0; }
+        .parti-btn { padding: 10px; font-weight: bold; font-size: 13px; border: 2px solid #444; border-radius: 6px; background: #2a2a2a; color: white; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        .parti-btn.active { background: var(--accent-color); border-color: #ff9100; color: #000; box-shadow: 0 0 10px rgba(255, 109, 0, 0.4); }
+        
+        .playlist { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
+        .playlist li { padding: 10px 12px; background: #2a2a2a; cursor: pointer; border-radius: 5px; font-size: 13px; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+        .playlist li.active { background: #333; border-left-color: var(--accent-color); font-weight: bold; }
+        
+        .logo-container { margin-top: 10px; padding: 8px; background: #151515; border: 1px solid #333; border-radius: 8px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; box-sizing: border-box; }
+        .logo-link { display: flex; align-items: center; text-decoration: none; width: 100%; }
+        .logo-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color); transition: 0.3s; }
+        .logo-text { color: #888; font-size: 11px; line-height: 14px; font-weight: 500; }
+        .logo-text span { color: var(--accent-color); font-weight: bold; font-size: 12px; display: block; }
+        .logo-link:hover .logo-img { transform: scale(1.08); box-shadow: 0 0 8px rgba(255, 109, 0, 0.6); }
+
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; background: #151515; align-items: center; justify-content: center; color: #666; font-size: 15px; }
+        
+        #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: -webkit-fill-available; background: black; z-index: 9999; flex-direction: column; }
+        #fs-pdf-viewer { flex-grow: 1; border: none; width: 100%; height: calc(100% - 75px); background: #222; }
+        
+        #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; }
+        audio { width: 55%; height: 40px; }
+        
+        .btn { padding: 10px 12px; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; white-space: nowrap; }
+        .exit-btn { background: #d32f2f; }
+
+        @media (max-width: 768px) {
+            #sidebar { width: 100%; padding: 8px; }
+            #main-content { display: none; }
+            .playlist li { padding: 8px 8px; font-size: 12px; }
+            audio { width: 50%; }
+            .logo-container { padding: 6px; margin-top: 6px; }
+            .logo-img { width: 38px; height: 38px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="countdown-bar">
+        KONSERE: <span id="countdown">Hesaplanıyor...</span> KALDI 🎶
+    </div>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <div class="parti-secici">
+                <button class="parti-btn active" onclick="partiDegistir('soprano', this)">Soprano</button>
+                <button class="parti-btn" onclick="partiDegistir('alto', this)">Alto</button>
+                <button class="parti-btn" onclick="partiDegistir('tenor', this)">Tenor</button>
+                <button class="parti-btn" onclick="partiDegistir('bas', this)">Bas</button>
+            </div>
+            
+            <ul class="playlist" id="playlist"></ul>
+
+            <div class="logo-container">
+                <a href="https://play.google.com/store/apps/developer?id=onrproduction" target="_blank" class="logo-link">
+                    <img src="onrproduction.png" alt="onrproduction logo" class="logo-img">
+                    <div class="logo-text">
+                        Geliştirici Sayfası:
+                        <span>onrproduction (Google Play)</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div id="main-content">🎵 Başlamak için listeden bir parça seçin...</div>
+    </div>
+
+    <div id="fullscreen-view">
+        <iframe id="fs-pdf-viewer" src="" allow="autoplay"></iframe>
+        <div id="fs-controls">
+            <button class="btn exit-btn" onclick="tamEkranKapat()">↩ Geri Dön</button>
+            <audio id="audio-player" controls></audio>
+        </div>
+    </div>
+
+    <script>
+        let seciliParti = "soprano"; 
+        let aktifSarki = null;
+
+        const sarkiVerisi = [
+            { no: "01", isim: "01_Maskeler" },
+            { no: "02", isim: "02_Bir_firtina" },
+            { no: "03", isim: "03_Gelevera" },
+            { no: "04", isim: "04_Entarisi" },
+            { no: "05", isim: "05_Deriko_üst" },
+            { no: "06", isim: "06_Söyle" },
+            { no: "07", isim: "07_Goodbye_love" },
+            { no: "08", isim: "08_Babayetu" },
+            { no: "09", isim: "09_Chan_Chan" },
+            { no: "10", isim: "10_Believer" },
+            { no: "11", isim: "11_Happy" },
+            { no: "12", isim: "12_Gunaydin_cocuklar" },
+            { no: "13", isim: "13_90lar" },
+            { no: "14", isim: "14_Parla" },
+            { no: "15", isim: "15_Ada_yolu" }
+        ];
+
+        const playlistEl = document.getElementById('playlist');
+        const fsPdfViewer = document.getElementById('fs-pdf-viewer');
+        const audioPlayer = document.getElementById('audio-player');
+        const fsView = document.getElementById('fullscreen-view');
+
+        sarkiVerisi.forEach((sarki) => {
+            let li = document.createElement('li');
+            li.innerText = `${sarki.no}. ${sarki.isim.substring(3).replace(/_/g, ' ')}`; 
+            li.onclick = () => parcaSec(sarki, li);
+            playlistEl.appendChild(li);
+        });
+
+        function partiDegistir(yeniParti, buton) {
+            document.querySelectorAll('.parti-btn').forEach(btn => btn.classList.remove('active'));
+            buton.classList.add('active');
+            seciliParti = yeniParti;
+            if (aktifSarki) medyaYukle(aktifSarki);
+        }
+
+        function parcaSec(sarki, element) {
+            document.querySelectorAll('.playlist li').forEach(li => li.classList.remove('active'));
+            element.classList.add('active');
+            aktifSarki = sarki;
+            tamEkranAc();
+            medyaYukle(sarki);
+        }
+
+        // --- GOOGLE GÜVENLİK VE BÜYÜK HARF UYUMLU MEDYA MOTORU ---
+        function medyaYukle(sarki) {
+            // Klasör adını tam olarak senin GitHub'daki gibi BÜYÜK HARFLE "Repertuar" yaptık.
+            // Ayrıca tarayıcıların iframe içinde yerel PDF engellemesini aşmak için Google Docs Viewer köprüsünü kurduk.
+            
+            const rawPdfUrl = `${window.location.origin}/Repertuar/${sarki.isim}/nota.pdf`;
+            fsPdfViewer.src = `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(rawPdfUrl)}`;
+            
+            const baseAudioUrl = `Repertuar/${sarki.isim}`;
+            audioPlayer.removeAttribute("src");
+            audioPlayer.innerHTML = `
+                <source src="${baseAudioUrl}/${seciliParti}.mp3" type="audio/mpeg">
+                <source src="${baseAudioUrl}/${seciliParti}.mp4" type="audio/mp4">
+                <source src="${baseAudioUrl}/${seciliParti}.m4a" type="audio/mp4">
+                <source src="${baseAudioUrl}/${seciliParti}.aac" type="audio/aac">
+                <source src="${baseAudioUrl}/${seciliParti}.wav" type="audio/wav">
+            `;
+            
+            audioPlayer.load();
+            setTimeout(() => {
+                audioPlayer.play().catch(e => console.log("Mobil onay bekleniyor."));
+            }, 100);
+        }
+
+        function tamEkranAc() {
+            fsView.style.display = "flex";
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(e => console.log("Tam ekran."));
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            }
+        }
+
+        function tamEkranKapat() {
+            fsView.style.display = "none";
+            audioPlayer.pause(); 
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        }
+
+        // GERİ SAYIM MOTORU (Hatası temizlendi, jilet gibi akar)
+        const konserTarihi = new Date("June 22, 2026 20:00:00").getTime();
+        setInterval(function() {
+            const mesafe = konserTarihi - new Date().getTime();
+            const gun = Math.floor(mesafe / (1000 * 60 * 60 * 24));
+            const saat = Math.floor((mesafe % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const dakika = Math.floor((mesafe % (1000 * 60 * 60)) / (1000 * 60));
+            const saniye = Math.floor((mesafe % (1000 * 60)) / 1000);
+            
+            if (mesafe < 0) {
+                document.getElementById("countdown").innerHTML = "KONSER BAŞLADI! 🎤";
+            } else {
+                document.getElementById("countdown").innerHTML = gun + " Gün, " + saat + " Saat, " + dakika + " Dakika, " + saniye + " Saniye";
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
