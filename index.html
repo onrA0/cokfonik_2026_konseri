@@ -143,29 +143,26 @@
             medyaYukle(sarki);
         }
 
-        // --- GOOGLE GÜVENLİK VE BÜYÜK HARF UYUMLU MEDYA MOTORU ---
-        function medyaYukle(sarki) {
-            // Klasör adını tam olarak senin GitHub'daki gibi BÜYÜK HARFLE "Repertuar" yaptık.
-            // Ayrıca tarayıcıların iframe içinde yerel PDF engellemesini aşmak için Google Docs Viewer köprüsünü kurduk.
-            
-            const rawPdfUrl = `${window.location.origin}/Repertuar/${sarki.isim}/nota.pdf`;
-            fsPdfViewer.src = `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(rawPdfUrl)}`;
-            
-            const baseAudioUrl = `Repertuar/${sarki.isim}`;
-            audioPlayer.removeAttribute("src");
-            audioPlayer.innerHTML = `
-                <source src="${baseAudioUrl}/${seciliParti}.mp3" type="audio/mpeg">
-                <source src="${baseAudioUrl}/${seciliParti}.mp4" type="audio/mp4">
-                <source src="${baseAudioUrl}/${seciliParti}.m4a" type="audio/mp4">
-                <source src="${baseAudioUrl}/${seciliParti}.aac" type="audio/aac">
-                <source src="${baseAudioUrl}/${seciliParti}.wav" type="audio/wav">
-            `;
-            
-            audioPlayer.load();
-            setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Mobil onay bekleniyor."));
-            }, 100);
-        }
+       function medyaYukle(sarki) {
+    const baseFolderUrl = `Repertuar/${sarki.isim}`;
+    
+    // Google'ı aradan çıkarıp doğrudan GitHub'daki PDF yolunu veriyoruz:
+    fsPdfViewer.src = `${baseFolderUrl}/nota.pdf`;
+    
+    audioPlayer.removeAttribute("src");
+    audioPlayer.innerHTML = `
+        <source src="${baseFolderUrl}/${seciliParti}.mp3" type="audio/mpeg">
+        <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
+        <source src="${baseFolderUrl}/${seciliParti}.m4a" type="audio/mp4">
+        <source src="${baseFolderUrl}/${seciliParti}.aac" type="audio/aac">
+        <source src="${baseFolderUrl}/${seciliParti}.wav" type="audio/wav">
+    `;
+    
+    audioPlayer.load();
+    setTimeout(() => {
+        audioPlayer.play().catch(e => console.log("Mobil tarayıcı onayı bekleniyor."));
+    }, 100);
+}
 
         function tamEkranAc() {
             fsView.style.display = "flex";
