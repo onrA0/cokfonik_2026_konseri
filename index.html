@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Koro Repertuar Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -38,7 +39,10 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; background: #151515; align-items: center; justify-content: center; color: #666; font-size: 15px; }
         
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: -webkit-fill-available; background: black; z-index: 9999; flex-direction: column; }
-        #fs-pdf-viewer { flex-grow: 1; border: none; width: 100%; height: calc(100% - 75px); background: #222; }
+        
+        /* Gelişmiş Mobil Uyumlu PDF Alanı */
+        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
+        .pdf-page-canvas { width: 95% !important; height: auto !important; max-width: 800px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border-radius: 4px; background: white; }
         
         #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; }
         audio { width: 55%; height: 40px; }
@@ -87,7 +91,8 @@
     </div>
 
     <div id="fullscreen-view">
-        <iframe id="fs-pdf-viewer" src="" allow="autoplay"></iframe>
+        <div id="pdf-scroll-container"></div>
+        
         <div id="fs-controls">
             <button class="btn exit-btn" onclick="tamEkranKapat()">↩ Geri Dön</button>
             <audio id="audio-player" controls></audio>
@@ -95,6 +100,8 @@
     </div>
 
     <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         let seciliParti = "soprano"; 
         let aktifSarki = null;
 
@@ -103,7 +110,7 @@
             { no: "02", isim: "02_Bir_firtina" },
             { no: "03", isim: "03_Gelevera" },
             { no: "04", isim: "04_Entarisi" },
-            { no: "05", isim: "05_Deriko" },
+            { no: "05", isim: "05_Deriko_üst" },
             { no: "06", isim: "06_Söyle" },
             { no: "07", isim: "07_Goodbye_love" },
             { no: "08", isim: "08_Babayetu" },
@@ -117,9 +124,9 @@
         ];
 
         const playlistEl = document.getElementById('playlist');
-        const fsPdfViewer = document.getElementById('fs-pdf-viewer');
         const audioPlayer = document.getElementById('audio-player');
         const fsView = document.getElementById('fullscreen-view');
+        const pdfContainer = document.getElementById('pdf-scroll-container');
 
         sarkiVerisi.forEach((sarki) => {
             let li = document.createElement('li');
@@ -143,26 +150,55 @@
             medyaYukle(sarki);
         }
 
-       function medyaYukle(sarki) {
-    const baseFolderUrl = `Repertuar/${sarki.isim}`;
-    
-    // Google'ı aradan çıkarıp doğrudan GitHub'daki PDF yolunu veriyoruz:
-    fsPdfViewer.src = `${baseFolderUrl}/nota.pdf`;
-    
-    audioPlayer.removeAttribute("src");
-    audioPlayer.innerHTML = `
-        <source src="${baseFolderUrl}/${seciliParti}.mp3" type="audio/mpeg">
-        <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
-        <source src="${baseFolderUrl}/${seciliParti}.m4a" type="audio/mp4">
-        <source src="${baseFolderUrl}/${seciliParti}.aac" type="audio/aac">
-        <source src="${baseFolderUrl}/${seciliParti}.wav" type="audio/wav">
-    `;
-    
-    audioPlayer.load();
-    setTimeout(() => {
-        audioPlayer.play().catch(e => console.log("Mobil tarayıcı onayı bekleniyor."));
-    }, 100);
-}
+        // --- %100 YEREL MOZILLA PDF RENDER MOTORU ---
+        function medyaYukle(sarki) {
+            const baseFolderUrl = `Repertuar/${sarki.isim}`;
+            
+            // Eski iframe mantığı silindi, PDF sayfaları tek tek canvas olarak çiziliyor
+            pdfContainer.innerHTML = "<div style='color:#fff; padding:20px;'>Nota yükleniyor...</div>";
+            
+            pdfjsLib.getDocument(`${baseFolderUrl}/nota.pdf`).promise.then(pdf => {
+                pdfContainer.innerHTML = ""; // Yükleniyor yazısını temizle
+                
+                // Çok sayfalı PDF'lerin tüm sayfalarını alt alta render etme döngüsü
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    pdf.getPage(pageNum).then(page => {
+                        const viewport = page.getViewport({ scale: 2.0 }); // Mobil netliği için yüksek çözünürlük ölçeği
+                        const canvas = document.createElement('canvas');
+                        canvas.className = 'pdf-page-canvas';
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+                        
+                        page.render(renderContext);
+                        pdfContainer.appendChild(canvas);
+                    });
+                }
+            }).catch(err => {
+                pdfContainer.innerHTML = "<div style='color:#ff4444; padding:20px;'>Nota PDF dosyası yüklenemedi.</div>";
+                console.error(err);
+            });
+            
+            // Ses Yönetimi
+            audioPlayer.removeAttribute("src");
+            audioPlayer.innerHTML = `
+                <source src="${baseFolderUrl}/${seciliParti}.mp3" type="audio/mpeg">
+                <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
+                <source src="${baseFolderUrl}/${seciliParti}.m4a" type="audio/mp4">
+                <source src="${baseFolderUrl}/${seciliParti}.aac" type="audio/aac">
+                <source src="${baseFolderUrl}/${seciliParti}.wav" type="audio/wav">
+            `;
+            
+            audioPlayer.load();
+            setTimeout(() => {
+                audioPlayer.play().catch(e => console.log("Mobil onay bekleniyor."));
+            }, 100);
+        }
 
         function tamEkranAc() {
             fsView.style.display = "flex";
@@ -182,7 +218,6 @@
             }
         }
 
-        // GERİ SAYIM MOTORU (Hatası temizlendi, jilet gibi akar)
         const konserTarihi = new Date("June 22, 2026 20:00:00").getTime();
         setInterval(function() {
             const mesafe = konserTarihi - new Date().getTime();
