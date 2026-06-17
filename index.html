@@ -27,13 +27,13 @@
         #countdown-bar span { color: #000000; font-size: 17px; }
 
         #app-container { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
-        #sidebar { width: 340px; background: var(--panel-bg); border-right: 1px solid #333; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; height: 100%; flex-shrink: 0; }
+        #sidebar { width: 340px; background: var(--panel-bg); border-right: 1px solid #333; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; height: 100%; flex-shrink: 0; -webkit-overflow-scrolling: touch; }
         
         .parti-secici { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
         .parti-btn { padding: 12px; font-weight: bold; font-size: 15px; border: 2px solid #444; border-radius: 6px; background: #2a2a2a; color: white; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .parti-btn.active { background: var(--accent-color); border-color: #ff9100; color: #000; box-shadow: 0 0 10px rgba(255, 109, 0, 0.4); }
         
-        .playlist { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
+        .playlist { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; }
         .playlist li { padding: 12px 14px; background: #2a2a2a; cursor: pointer; border-radius: 6px; font-size: 15px; border-left: 4px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
         .playlist li .sarki-no { color: var(--accent-color); font-weight: bold; margin-right: 6px; font-size: 14px; }
         .playlist li.active { background: #333; border-left-color: var(--accent-color); font-weight: bold; }
@@ -210,7 +210,7 @@
             { no: "02", isim: "02_Bir_firtina" },
             { no: "03", isim: "03_Gelevera" },
             { no: "04", isim: "04_Entarisi" },
-            { no: "05", isim: "05_Deriko" },
+            { no: "05", isim: "05_Deriko_üst" },
             { no: "06", isim: "06_Söyle" },
             { no: "07", isim: "07_Goodbye_love" },
             { no: "08", isim: "08_Babayetu" },
