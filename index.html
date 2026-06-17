@@ -52,8 +52,12 @@
 
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: -webkit-fill-available; background: black; z-index: 9999; flex-direction: column; }
         
-        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow: hidden; position: relative; }
-        .pdf-embed-element { width: 100%; height: 100%; border: none; transition: transform 0.2s ease; transform-origin: top center; }
+        /* Yenilenmiş Güvenli Zoom Alanı */
+        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 15px; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+        
+        /* Masaüstü kısıtlamasını aşan ve butona anında tepki veren yeni CSS katmanı */
+        #pdf-wrapper-layer { width: 100%; height: 100%; min-height: 100%; transition: transform 0.15s ease; transform-origin: top center; }
+        .pdf-embed-element { width: 100%; height: 100%; border: none; }
         
         #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; gap: 10px; }
         audio { width: 50%; height: 42px; }
@@ -137,7 +141,8 @@
 
     <div id="fullscreen-view">
         <div id="pdf-scroll-container">
-            </div>
+            <div id="pdf-wrapper-layer"></div>
+        </div>
         
         <div id="fs-controls">
             <button class="btn exit-btn" onclick="tamEkranKapat()">↩ Geri Dön</button>
@@ -145,8 +150,8 @@
             <button id="easter-egg-btn" onclick="surprizCal()" title="Sürpriz Parça!">📻</button>
             
             <div class="zoom-controls">
-                <button class="zoom-btn" onclick="zoomPDF(0.2)">+</button>
-                <button class="zoom-btn" onclick="zoomPDF(-0.2)">-</button>
+                <button class="zoom-btn" onclick="zoomPDF(0.15)">+</button>
+                <button class="zoom-btn" onclick="zoomPDF(-0.15)">-</button>
             </div>
 
             <audio id="audio-player" controls preload="auto"></audio>
@@ -156,14 +161,14 @@
     <script>
         let seciliParti = "soprano"; 
         let aktifSarki = null;
-        let mevcutZoom = 1.0;
+        let mevcutZoom = 1.0; // CSS Ölçekleme çarpanı (1.0 = normal boyut)
 
         const sarkiVerisi = [
             { no: "01", isim: "01_Maskeler" },
             { no: "02", isim: "02_Bir_firtina" },
             { no: "03", isim: "03_Gelevera" },
             { no: "04", isim: "04_Entarisi" },
-            { no: "05", isim: "05_Deriko" },
+            { no: "05", isim: "05_Deriko_üst" },
             { no: "06", isim: "06_Söyle" },
             { no: "07", isim: "07_Goodbye_love" },
             { no: "08", isim: "08_Babayetu" },
@@ -179,7 +184,7 @@
         const playlistEl = document.getElementById('playlist');
         const audioPlayer = document.getElementById('audio-player');
         const fsView = document.getElementById('fullscreen-view');
-        const pdfContainer = document.getElementById('pdf-scroll-container');
+        const wrapperLayer = document.getElementById('pdf-wrapper-layer');
         const eggBtn = document.getElementById('easter-egg-btn');
 
         sarkiVerisi.forEach((sarki) => {
@@ -207,44 +212,39 @@
                 eggBtn.style.display = "none";
             }
             
-            mevcutZoom = 1.0;
+            mevcutZoom = 1.0; 
+            wrapperLayer.style.transform = "scale(1)";
             tamEkranAc();
             medyaYukle(sarki);
         }
 
-        // --- AKILLI ÖNBELLEK KIRICI PDF VE MEDYA MOTORU ---
         function medyaYukle(sarki) {
             const baseFolderUrl = `Repertuar/${sarki.isim}`;
+            const temizPdfYolu = `${baseFolderUrl}/nota.pdf?v=${new Date().getTime()}`;
             
-            // Her şarkı tıklandığında eski object elementini tamamen imha edip sıfırdan kuruyoruz
-            pdfContainer.innerHTML = "";
-            
-            // Adresin sonuna tarayıcıyı kandırmak için milisaniyelik benzersiz versiyon ekliyoruz (?cache=...)
-            const benzersizPdfYolu = `${baseFolderUrl}/nota.pdf?cache=${new Date().getTime()}`;
+            wrapperLayer.innerHTML = "";
             
             const yeniObj = document.createElement('object');
             yeniObj.id = "pdf-viewer-obj";
             yeniObj.className = "pdf-embed-element";
             yeniObj.type = "application/pdf";
-            yeniObj.data = benzersizPdfYolu;
-            yeniObj.style.transform = `scale(${mevcutZoom})`;
+            yeniObj.data = temizPdfYolu;
             
             const yeniEmbed = document.createElement('embed');
-            yeniEmbed.src = benzersizPdfYolu;
+            yeniEmbed.src = temizPdfYolu;
             yeniEmbed.type = "application/pdf";
             
             yeniObj.appendChild(yeniEmbed);
-            pdfContainer.appendChild(yeniObj);
+            wrapperLayer.appendChild(yeniObj);
             
-            // Ses Yükleme Blokları
+            // Ses Atama
             audioPlayer.innerHTML = `
                 <source src="${baseFolderUrl}/${seciliParti}.mp3?v=${new Date().getTime()}" type="audio/mpeg">
                 <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
-                <source src="${baseFolderUrl}/${seciliParti}.m4a" type="audio/mp4">
             `;
             audioPlayer.load();
             setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Oynatma tetiklenemedi."));
+                audioPlayer.play().catch(e => console.log("Oynatma bekleniyor."));
             }, 100);
         }
 
@@ -252,19 +252,18 @@
             audioPlayer.innerHTML = `<source src="Repertuar/13_90lar/90.mp3?v=${new Date().getTime()}" type="audio/mpeg">`;
             audioPlayer.load();
             setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Sürpriz çalınamadı."));
+                audioPlayer.play().catch(e => console.log("Sürpriz kilitlendi."));
             }, 50);
         }
 
+        // Kesin Olarak Çalışan Yeni CSS Transform Tabanlı Zoom Mekanizması
         function zoomPDF(miktar) {
             mevcutZoom += miktar;
             if (mevcutZoom < 0.7) mevcutZoom = 0.7;
             if (mevcutZoom > 2.5) mevcutZoom = 2.5;
             
-            const dinamikObj = document.getElementById('pdf-viewer-obj');
-            if (dinamikObj) {
-                dinamikObj.style.transform = `scale(${mevcutZoom})`;
-            }
+            // Doğrudan sarmalayıcı div katmanını ölçekliyoruz, tarayıcı buna engel olamaz
+            wrapperLayer.style.transform = `scale(${mevcutZoom})`;
         }
 
         function tamEkranAc() {
@@ -279,7 +278,7 @@
         function tamEkranKapat() {
             fsView.style.display = "none";
             audioPlayer.pause(); 
-            pdfContainer.innerHTML = ""; // Kapatırken hafızayı tamamen temizle
+            wrapperLayer.innerHTML = ""; 
             if (document.fullscreenElement || document.webkitFullscreenElement) {
                 if (document.exitFullscreen) document.exitFullscreen();
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
