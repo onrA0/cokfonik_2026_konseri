@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-title" content="Çokfonik 2026">
     <link rel="apple-touch-icon" href="onrproduction.png">
     
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
     <style>
         :root {
             --bg-color: #121212;
@@ -50,15 +53,48 @@
         .akis-satir strong { color: #ffffff; margin-right: 6px; white-space: nowrap; }
         .akis-satir .not { color: #aaa; font-size: 14.5px; margin-left: 6px; }
 
+        /* TAM EKRAN */
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: -webkit-fill-available; background: black; z-index: 9999; flex-direction: column; }
         
-        /* Yenilenmiş Güvenli Zoom Alanı */
-        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 15px; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
-        
-        /* Masaüstü kısıtlamasını aşan ve butona anında tepki veren yeni CSS katmanı */
-        #pdf-wrapper-layer { width: 100%; height: 100%; min-height: 100%; transition: transform 0.15s ease; transform-origin: top center; }
-        .pdf-embed-element { width: 100%; height: 100%; border: none; }
-        
+        /* PDF Canvas Scroll Alanı */
+        #pdf-scroll-container {
+            flex-grow: 1;
+            width: 100%;
+            background: #222;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
+        }
+
+        /* Canvas wrapper — zoom burada uygulanır */
+        #pdf-canvas-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            transform-origin: top center;
+            /* genişlik JS tarafından ayarlanır */
+        }
+
+        #pdf-canvas-wrapper canvas {
+            display: block;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border-radius: 4px;
+        }
+
+        #pdf-loading {
+            color: #888;
+            font-size: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* Alt kontrol çubuğu */
         #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; gap: 10px; }
         audio { width: 50%; height: 42px; }
         
@@ -141,7 +177,9 @@
 
     <div id="fullscreen-view">
         <div id="pdf-scroll-container">
-            <div id="pdf-wrapper-layer"></div>
+            <div id="pdf-canvas-wrapper">
+                <div id="pdf-loading">Nota yükleniyor...</div>
+            </div>
         </div>
         
         <div id="fs-controls">
@@ -150,8 +188,8 @@
             <button id="easter-egg-btn" onclick="surprizCal()" title="Sürpriz Parça!">📻</button>
             
             <div class="zoom-controls">
-                <button class="zoom-btn" onclick="zoomPDF(0.15)">+</button>
-                <button class="zoom-btn" onclick="zoomPDF(-0.15)">-</button>
+                <button class="zoom-btn" onclick="zoomDegistir(0.2)">+</button>
+                <button class="zoom-btn" onclick="zoomDegistir(-0.2)">−</button>
             </div>
 
             <audio id="audio-player" controls preload="auto"></audio>
@@ -159,16 +197,20 @@
     </div>
 
     <script>
+        // PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         let seciliParti = "soprano"; 
         let aktifSarki = null;
-        let mevcutZoom = 1.0; // CSS Ölçekleme çarpanı (1.0 = normal boyut)
+        let mevcutZoom = 1.0;
+        let yuklenenPDF = null; // PDF.js dökümanı
 
         const sarkiVerisi = [
             { no: "01", isim: "01_Maskeler" },
             { no: "02", isim: "02_Bir_firtina" },
             { no: "03", isim: "03_Gelevera" },
             { no: "04", isim: "04_Entarisi" },
-            { no: "05", isim: "05_Deriko_üst" },
+            { no: "05", isim: "05_Deriko" },
             { no: "06", isim: "06_Söyle" },
             { no: "07", isim: "07_Goodbye_love" },
             { no: "08", isim: "08_Babayetu" },
@@ -184,12 +226,12 @@
         const playlistEl = document.getElementById('playlist');
         const audioPlayer = document.getElementById('audio-player');
         const fsView = document.getElementById('fullscreen-view');
-        const wrapperLayer = document.getElementById('pdf-wrapper-layer');
+        const canvasWrapper = document.getElementById('pdf-canvas-wrapper');
         const eggBtn = document.getElementById('easter-egg-btn');
 
         sarkiVerisi.forEach((sarki) => {
             let li = document.createElement('li');
-            li.innerHTML = `<span class="sarki-no">${sarki.no}.</span>${sarki.isim.substring(3).replace(/_/g, ' ')}`; 
+            li.innerHTML = `<span class="sarki-no">${sarki.no}.</span>${sarki.isim.substring(3).replace(/_/g, ' ')}`;
             li.onclick = () => parcaSec(sarki, li);
             playlistEl.appendChild(li);
         });
@@ -198,7 +240,7 @@
             document.querySelectorAll('.parti-btn').forEach(btn => btn.classList.remove('active'));
             buton.classList.add('active');
             seciliParti = yeniParti;
-            if (aktifSarki) medyaYukle(aktifSarki);
+            if (aktifSarki) sesYukle(aktifSarki);
         }
 
         function parcaSec(sarki, element) {
@@ -206,97 +248,128 @@
             element.classList.add('active');
             aktifSarki = sarki;
             
-            if(sarki.isim === "13_90lar") {
-                eggBtn.style.display = "flex";
-            } else {
-                eggBtn.style.display = "none";
-            }
+            eggBtn.style.display = sarki.isim === "13_90lar" ? "flex" : "none";
             
-            mevcutZoom = 1.0; 
-            wrapperLayer.style.transform = "scale(1)";
+            mevcutZoom = 1.0;
             tamEkranAc();
             medyaYukle(sarki);
         }
 
-        function medyaYukle(sarki) {
+        /* ── PDF.js ile Tüm Sayfaları Render Et ── */
+        async function pdfYukle(pdfUrl) {
+            canvasWrapper.innerHTML = '<div id="pdf-loading">Nota yükleniyor...</div>';
+            yuklenenPDF = null;
+
+            try {
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                const pdf = await loadingTask.promise;
+                yuklenenPDF = pdf;
+
+                canvasWrapper.innerHTML = ''; // loading mesajını temizle
+
+                for (let sayfa = 1; sayfa <= pdf.numPages; sayfa++) {
+                    const page = await pdf.getPage(sayfa);
+
+                    // Ekran genişliğine göre başlangıç ölçeği
+                    const containerWidth = document.getElementById('pdf-scroll-container').clientWidth - 32;
+                    const viewport = page.getViewport({ scale: 1 });
+                    const fitScale = containerWidth / viewport.width;
+
+                    const scaledViewport = page.getViewport({ scale: fitScale });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    canvas.dataset.sayfa = sayfa;
+                    canvas.dataset.fitScale = fitScale;
+
+                    canvasWrapper.appendChild(canvas);
+
+                    const ctx = canvas.getContext('2d');
+                    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+                }
+
+                // Zoom uygula (başlangıçta 1.0)
+                zoomUygula();
+
+            } catch (err) {
+                canvasWrapper.innerHTML = `<div id="pdf-loading" style="color:#f44;">PDF yüklenemedi: ${err.message}</div>`;
+                console.error('PDF yükleme hatası:', err);
+            }
+        }
+
+        /* ── Zoom: Canvas wrapper'a CSS scale uygula ── */
+        function zoomUygula() {
+            canvasWrapper.style.transform = `scale(${mevcutZoom})`;
+            // Scroll container'ın scroll alanını güncelle
+            const scrollEl = document.getElementById('pdf-scroll-container');
+            const wrapperRect = canvasWrapper.getBoundingClientRect();
+            // transform-origin top center olduğundan yatay scroll için marjin ekle
+            const overflow = (canvasWrapper.scrollWidth * mevcutZoom - scrollEl.clientWidth) / 2;
+            canvasWrapper.style.marginLeft = overflow > 0 ? `${overflow}px` : '0';
+            canvasWrapper.style.marginRight = overflow > 0 ? `${overflow}px` : '0';
+        }
+
+        function zoomDegistir(miktar) {
+            mevcutZoom = Math.min(3.0, Math.max(0.5, mevcutZoom + miktar));
+            zoomUygula();
+        }
+
+        function sesYukle(sarki) {
             const baseFolderUrl = `Repertuar/${sarki.isim}`;
-            const temizPdfYolu = `${baseFolderUrl}/nota.pdf?v=${new Date().getTime()}`;
-            
-            wrapperLayer.innerHTML = "";
-            
-            const yeniObj = document.createElement('object');
-            yeniObj.id = "pdf-viewer-obj";
-            yeniObj.className = "pdf-embed-element";
-            yeniObj.type = "application/pdf";
-            yeniObj.data = temizPdfYolu;
-            
-            const yeniEmbed = document.createElement('embed');
-            yeniEmbed.src = temizPdfYolu;
-            yeniEmbed.type = "application/pdf";
-            
-            yeniObj.appendChild(yeniEmbed);
-            wrapperLayer.appendChild(yeniObj);
-            
-            // Ses Atama
             audioPlayer.innerHTML = `
-                <source src="${baseFolderUrl}/${seciliParti}.mp3?v=${new Date().getTime()}" type="audio/mpeg">
+                <source src="${baseFolderUrl}/${seciliParti}.mp3?v=${Date.now()}" type="audio/mpeg">
                 <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
             `;
             audioPlayer.load();
             setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Oynatma bekleniyor."));
+                audioPlayer.play().catch(() => {});
             }, 100);
         }
 
-        function surprizCal() {
-            audioPlayer.innerHTML = `<source src="Repertuar/13_90lar/90.mp3?v=${new Date().getTime()}" type="audio/mpeg">`;
-            audioPlayer.load();
-            setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Sürpriz kilitlendi."));
-            }, 50);
+        function medyaYukle(sarki) {
+            const pdfUrl = `Repertuar/${sarki.isim}/nota.pdf?v=${Date.now()}`;
+            pdfYukle(pdfUrl);
+            sesYukle(sarki);
         }
 
-        // Kesin Olarak Çalışan Yeni CSS Transform Tabanlı Zoom Mekanizması
-        function zoomPDF(miktar) {
-            mevcutZoom += miktar;
-            if (mevcutZoom < 0.7) mevcutZoom = 0.7;
-            if (mevcutZoom > 2.5) mevcutZoom = 2.5;
-            
-            // Doğrudan sarmalayıcı div katmanını ölçekliyoruz, tarayıcı buna engel olamaz
-            wrapperLayer.style.transform = `scale(${mevcutZoom})`;
+        function surprizCal() {
+            audioPlayer.innerHTML = `<source src="Repertuar/13_90lar/90.mp3?v=${Date.now()}" type="audio/mpeg">`;
+            audioPlayer.load();
+            setTimeout(() => audioPlayer.play().catch(() => {}), 50);
         }
 
         function tamEkranAc() {
             fsView.style.display = "flex";
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(e => console.log("Tam ekran."));
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen();
-            }
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
         }
 
         function tamEkranKapat() {
             fsView.style.display = "none";
-            audioPlayer.pause(); 
-            wrapperLayer.innerHTML = ""; 
+            audioPlayer.pause();
+            canvasWrapper.innerHTML = '';
+            yuklenenPDF = null;
             if (document.fullscreenElement || document.webkitFullscreenElement) {
                 if (document.exitFullscreen) document.exitFullscreen();
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
             }
         }
 
+        /* ── Geri sayım ── */
         const konserTarihi = new Date("June 22, 2026 20:00:00").getTime();
         setInterval(function() {
-            const mesafe = konserTarihi - new Date().getTime();
-            const gun = Math.floor(mesafe / (1000 * 60 * 60 * 24));
-            const saat = Math.floor((mesafe % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const dakika = Math.floor((mesafe % (1000 * 60 * 60)) / (1000 * 60));
-            const saniye = Math.floor((mesafe % (1000 * 60)) / 1000);
-            
+            const mesafe = konserTarihi - Date.now();
             if (mesafe < 0) {
                 document.getElementById("countdown").innerHTML = "KONSER BAŞLADI! 🎤";
             } else {
-                document.getElementById("countdown").innerHTML = gun + " Gün, " + saat + " Saat, " + dakika + " Dakika, " + saniye + " Saniye";
+                const gun = Math.floor(mesafe / 86400000);
+                const saat = Math.floor((mesafe % 86400000) / 3600000);
+                const dakika = Math.floor((mesafe % 3600000) / 60000);
+                const saniye = Math.floor((mesafe % 60000) / 1000);
+                document.getElementById("countdown").innerHTML =
+                    gun + " Gün, " + saat + " Saat, " + dakika + " Dakika, " + saniye + " Saniye";
             }
         }, 1000);
     </script>
