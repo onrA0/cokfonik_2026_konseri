@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Koro Repertuar Player</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Çokfonik 2026">
+    <link rel="apple-touch-icon" href="onrproduction.png">
+    
     <style>
         :root {
             --bg-color: #121212;
@@ -15,19 +20,16 @@
         html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: -webkit-fill-available; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-color); color: var(--text-color); overflow: hidden; }
         body { display: flex; flex-direction: column; }
 
-        /* Geri Sayım Barı */
         #countdown-bar { background: linear-gradient(90deg, #ff6d00, #ffab40); color: #000000; text-align: center; padding: 10px 5px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10; flex-shrink: 0; }
         #countdown-bar span { color: #000000; font-size: 17px; }
 
         #app-container { display: flex; flex-grow: 1; overflow: hidden; width: 100%; }
         #sidebar { width: 340px; background: var(--panel-bg); border-right: 1px solid #333; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; height: 100%; flex-shrink: 0; }
         
-        /* Parti Butonları */
         .parti-secici { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
         .parti-btn { padding: 12px; font-weight: bold; font-size: 15px; border: 2px solid #444; border-radius: 6px; background: #2a2a2a; color: white; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .parti-btn.active { background: var(--accent-color); border-color: #ff9100; color: #000; box-shadow: 0 0 10px rgba(255, 109, 0, 0.4); }
         
-        /* Şarkı Listesi */
         .playlist { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
         .playlist li { padding: 12px 14px; background: #2a2a2a; cursor: pointer; border-radius: 6px; font-size: 15px; border-left: 4px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
         .playlist li .sarki-no { color: var(--accent-color); font-weight: bold; margin-right: 6px; font-size: 14px; }
@@ -38,9 +40,7 @@
         .logo-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color); transition: 0.3s; }
         .logo-text { color: #888; font-size: 11px; line-height: 14px; font-weight: 500; }
         .logo-text span { color: var(--accent-color); font-weight: bold; font-size: 12px; display: block; }
-        .logo-link:hover .logo-img { transform: scale(1.08); box-shadow: 0 0 8px rgba(255, 109, 0, 0.6); }
 
-        /* Konser Akışı Alanı Tasarımı */
         #main-content { flex-grow: 1; display: flex; flex-direction: column; background: #151515; padding: 30px; box-sizing: border-box; overflow-y: auto; align-items: flex-start; justify-content: flex-start; }
         .akis-container { width: 100%; max-width: 700px; margin: 0 auto; background: #1a1a1a; padding: 25px; border-radius: 12px; border: 1px solid #2d2d2d; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
         .akis-baslik { color: var(--accent-color); font-size: 24px; font-weight: 800; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
@@ -51,12 +51,19 @@
         .akis-satir .not { color: #aaa; font-size: 14.5px; margin-left: 6px; }
 
         #fullscreen-view { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: -webkit-fill-available; background: black; z-index: 9999; flex-direction: column; }
-        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
-        .pdf-page-canvas { width: 95% !important; height: auto !important; max-width: 800px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border-radius: 4px; background: white; }
         
-        #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; }
-        audio { width: 55%; height: 42px; }
+        #pdf-scroll-container { flex-grow: 1; width: 100%; height: calc(100% - 75px); background: #222; overflow: hidden; position: relative; }
+        .pdf-embed-element { width: 100%; height: 100%; border: none; transition: transform 0.2s ease; transform-origin: top center; }
         
+        #fs-controls { height: 75px; background: #1a1a1a; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: 1px solid #333; box-sizing: border-box; flex-shrink: 0; gap: 10px; }
+        audio { width: 50%; height: 42px; }
+        
+        #easter-egg-btn { display: none; background: #4a148c; border: 2px solid #aa00ff; color: white; padding: 10px; font-size: 20px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; align-items: center; justify-content: center; animation: pulse 1.5s infinite; flex-shrink: 0; }
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(170, 0, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0); } }
+
+        .zoom-controls { display: flex; gap: 4px; flex-shrink: 0; }
+        .zoom-btn { background: #333; border: 1px solid #555; color: white; width: 36px; height: 36px; font-size: 18px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+
         .btn { padding: 12px 14px; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap; }
         .exit-btn { background: #d32f2f; }
 
@@ -65,7 +72,7 @@
             #main-content { display: none; }
             .playlist li { padding: 11px 12px; font-size: 14px; }
             .parti-btn { padding: 11px; font-size: 14px; }
-            audio { width: 52%; }
+            audio { width: 40%; }
             .logo-container { padding: 6px; margin-top: 6px; }
             .logo-img { width: 38px; height: 38px; }
         }
@@ -129,21 +136,28 @@
     </div>
 
     <div id="fullscreen-view">
-        <div id="pdf-scroll-container"></div>
+        <div id="pdf-scroll-container">
+            </div>
         
         <div id="fs-controls">
             <button class="btn exit-btn" onclick="tamEkranKapat()">↩ Geri Dön</button>
-            <audio id="audio-player" controls></audio>
+            
+            <button id="easter-egg-btn" onclick="surprizCal()" title="Sürpriz Parça!">📻</button>
+            
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomPDF(0.2)">+</button>
+                <button class="zoom-btn" onclick="zoomPDF(-0.2)">-</button>
+            </div>
+
+            <audio id="audio-player" controls preload="auto"></audio>
         </div>
     </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
         let seciliParti = "soprano"; 
         let aktifSarki = null;
+        let mevcutZoom = 1.0;
 
-        // Oynatıcı data index yapısı klasör düzenine göre senkronize edildi (13 90lar, 14 Parla)
         const sarkiVerisi = [
             { no: "01", isim: "01_Maskeler" },
             { no: "02", isim: "02_Bir_firtina" },
@@ -166,6 +180,7 @@
         const audioPlayer = document.getElementById('audio-player');
         const fsView = document.getElementById('fullscreen-view');
         const pdfContainer = document.getElementById('pdf-scroll-container');
+        const eggBtn = document.getElementById('easter-egg-btn');
 
         sarkiVerisi.forEach((sarki) => {
             let li = document.createElement('li');
@@ -185,53 +200,71 @@
             document.querySelectorAll('.playlist li').forEach(li => li.classList.remove('active'));
             element.classList.add('active');
             aktifSarki = sarki;
+            
+            if(sarki.isim === "13_90lar") {
+                eggBtn.style.display = "flex";
+            } else {
+                eggBtn.style.display = "none";
+            }
+            
+            mevcutZoom = 1.0;
             tamEkranAc();
             medyaYukle(sarki);
         }
 
+        // --- AKILLI ÖNBELLEK KIRICI PDF VE MEDYA MOTORU ---
         function medyaYukle(sarki) {
             const baseFolderUrl = `Repertuar/${sarki.isim}`;
-            pdfContainer.innerHTML = "<div style='color:#fff; padding:20px; font-size:16px;'>Nota yükleniyor...</div>";
             
-            pdfjsLib.getDocument(`${baseFolderUrl}/nota.pdf`).promise.then(pdf => {
-                pdfContainer.innerHTML = ""; 
-                
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                    pdf.getPage(pageNum).then(page => {
-                        const viewport = page.getViewport({ scale: 2.0 }); 
-                        const canvas = document.createElement('canvas');
-                        canvas.className = 'pdf-page-canvas';
-                        const context = canvas.getContext('2d');
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-                        
-                        const renderContext = {
-                            canvasContext: context,
-                            viewport: viewport
-                        };
-                        
-                        page.render(renderContext);
-                        pdfContainer.appendChild(canvas);
-                    });
-                }
-            }).catch(err => {
-                pdfContainer.innerHTML = "<div style='color:#ff4444; padding:20px; font-size:16px;'>Nota PDF dosyası yüklenemedi.</div>";
-                console.error(err);
-            });
+            // Her şarkı tıklandığında eski object elementini tamamen imha edip sıfırdan kuruyoruz
+            pdfContainer.innerHTML = "";
             
-            audioPlayer.removeAttribute("src");
+            // Adresin sonuna tarayıcıyı kandırmak için milisaniyelik benzersiz versiyon ekliyoruz (?cache=...)
+            const benzersizPdfYolu = `${baseFolderUrl}/nota.pdf?cache=${new Date().getTime()}`;
+            
+            const yeniObj = document.createElement('object');
+            yeniObj.id = "pdf-viewer-obj";
+            yeniObj.className = "pdf-embed-element";
+            yeniObj.type = "application/pdf";
+            yeniObj.data = benzersizPdfYolu;
+            yeniObj.style.transform = `scale(${mevcutZoom})`;
+            
+            const yeniEmbed = document.createElement('embed');
+            yeniEmbed.src = benzersizPdfYolu;
+            yeniEmbed.type = "application/pdf";
+            
+            yeniObj.appendChild(yeniEmbed);
+            pdfContainer.appendChild(yeniObj);
+            
+            // Ses Yükleme Blokları
             audioPlayer.innerHTML = `
-                <source src="${baseFolderUrl}/${seciliParti}.mp3" type="audio/mpeg">
+                <source src="${baseFolderUrl}/${seciliParti}.mp3?v=${new Date().getTime()}" type="audio/mpeg">
                 <source src="${baseFolderUrl}/${seciliParti}.mp4" type="audio/mp4">
                 <source src="${baseFolderUrl}/${seciliParti}.m4a" type="audio/mp4">
-                <source src="${baseFolderUrl}/${seciliParti}.aac" type="audio/aac">
-                <source src="${baseFolderUrl}/${seciliParti}.wav" type="audio/wav">
             `;
-            
             audioPlayer.load();
             setTimeout(() => {
-                audioPlayer.play().catch(e => console.log("Mobil onay bekleniyor."));
+                audioPlayer.play().catch(e => console.log("Oynatma tetiklenemedi."));
             }, 100);
+        }
+
+        function surprizCal() {
+            audioPlayer.innerHTML = `<source src="Repertuar/13_90lar/90.mp3?v=${new Date().getTime()}" type="audio/mpeg">`;
+            audioPlayer.load();
+            setTimeout(() => {
+                audioPlayer.play().catch(e => console.log("Sürpriz çalınamadı."));
+            }, 50);
+        }
+
+        function zoomPDF(miktar) {
+            mevcutZoom += miktar;
+            if (mevcutZoom < 0.7) mevcutZoom = 0.7;
+            if (mevcutZoom > 2.5) mevcutZoom = 2.5;
+            
+            const dinamikObj = document.getElementById('pdf-viewer-obj');
+            if (dinamikObj) {
+                dinamikObj.style.transform = `scale(${mevcutZoom})`;
+            }
         }
 
         function tamEkranAc() {
@@ -246,6 +279,7 @@
         function tamEkranKapat() {
             fsView.style.display = "none";
             audioPlayer.pause(); 
+            pdfContainer.innerHTML = ""; // Kapatırken hafızayı tamamen temizle
             if (document.fullscreenElement || document.webkitFullscreenElement) {
                 if (document.exitFullscreen) document.exitFullscreen();
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
