@@ -99,6 +99,7 @@
         audio { width: 50%; height: 42px; }
         
         #easter-egg-btn { display: none; background: #4a148c; border: 2px solid #aa00ff; color: white; padding: 10px; font-size: 20px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; align-items: center; justify-content: center; animation: pulse 1.5s infinite; flex-shrink: 0; }
+        #easter-egg-btn2 { display: none; background: #b71c1c; border: 2px solid #ff1744; color: white; padding: 10px; font-size: 20px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; align-items: center; justify-content: center; animation: pulse 1.5s infinite; flex-shrink: 0; }
         @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(170, 0, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0); } }
 
         .zoom-controls { display: flex; gap: 4px; flex-shrink: 0; }
@@ -186,6 +187,7 @@
             <button class="btn exit-btn" onclick="tamEkranKapat()">↩ Geri Dön</button>
             
             <button id="easter-egg-btn" onclick="surprizCal()" title="Sürpriz Parça!">📻</button>
+            <button id="easter-egg-btn2" onclick="hasanVideoAc()" title="Sürpriz!">🎬</button>
             
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="zoomDegistir(0.2)">+</button>
@@ -194,6 +196,12 @@
 
             <audio id="audio-player" controls preload="auto"></audio>
         </div>
+    </div>
+
+    <!-- Hasan Video Overlay -->
+    <div id="video-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#000; z-index:99999; flex-direction:column; align-items:center; justify-content:center;">
+        <video id="hasan-video" controls playsinline webkit-playsinline style="max-width:100%; max-height:calc(100vh - 60px); border-radius:8px;"></video>
+        <button onclick="hasanVideoKapat()" style="margin-top:14px; background:#d32f2f; color:white; border:none; border-radius:6px; padding:12px 28px; font-size:15px; font-weight:bold; cursor:pointer;">✕ Kapat</button>
     </div>
 
     <script>
@@ -249,6 +257,7 @@
             aktifSarki = sarki;
             
             eggBtn.style.display = sarki.isim === "13_90lar" ? "flex" : "none";
+            document.getElementById('easter-egg-btn2').style.display = sarki.isim === "12_Gunaydin_cocuklar" ? "flex" : "none";
             
             mevcutZoom = 1.0;
             tamEkranAc();
@@ -366,6 +375,23 @@
             const pdfUrl = `Repertuar/${sarki.isim}/nota.pdf?v=${Date.now()}`;
             pdfYukle(pdfUrl);
             sesYukle(sarki);
+        }
+
+        function hasanVideoAc() {
+            const overlay = document.getElementById('video-overlay');
+            const video = document.getElementById('hasan-video');
+            video.src = `Repertuar/12_Gunaydin_cocuklar/hasan.mp4?v=${Date.now()}`;
+            overlay.style.display = 'flex';
+            video.load();
+            setTimeout(() => video.play().catch(() => {}), 150);
+        }
+
+        function hasanVideoKapat() {
+            const overlay = document.getElementById('video-overlay');
+            const video = document.getElementById('hasan-video');
+            video.pause();
+            video.src = '';
+            overlay.style.display = 'none';
         }
 
         function surprizCal() {
