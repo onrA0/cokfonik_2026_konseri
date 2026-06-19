@@ -100,6 +100,9 @@
         
         #easter-egg-btn { display: none; background: #4a148c; border: 2px solid #aa00ff; color: white; padding: 10px; font-size: 20px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; align-items: center; justify-content: center; animation: pulse 1.5s infinite; flex-shrink: 0; }
         #easter-egg-btn2 { display: none; background: #b71c1c; border: 2px solid #ff1744; color: white; padding: 10px; font-size: 20px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; align-items: center; justify-content: center; animation: pulse 1.5s infinite; flex-shrink: 0; }
+        #easter-egg-btn3 { display: none; background: linear-gradient(160deg, #fffde7, #fff9c4, #ffe082); border: 2px solid #ffd54f; color: transparent; cursor: pointer; width: 38px; height: 48px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; align-items: center; justify-content: center; flex-shrink: 0; position: relative; overflow: hidden; animation: eggPulse 1.5s infinite; }
+        #easter-egg-btn3::after { content: '🎵'; font-size: 18px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        @keyframes eggPulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 213, 79, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 213, 79, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 213, 79, 0); } }
         @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(170, 0, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(170, 0, 255, 0); } }
 
         .zoom-controls { display: flex; gap: 4px; flex-shrink: 0; }
@@ -188,6 +191,7 @@
             
             <button id="easter-egg-btn" onclick="surprizCal()" title="Sürpriz Parça!">📻</button>
             <button id="easter-egg-btn2" onclick="hasanVideoAc()" title="Sürpriz!">🎬</button>
+            <button id="easter-egg-btn3" onclick="soyleEggAc()" title="Sürpriz!"></button>
             
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="zoomDegistir(0.2)">+</button>
@@ -218,7 +222,7 @@
             { no: "02", isim: "02_Bir_firtina" },
             { no: "03", isim: "03_Gelevera" },
             { no: "04", isim: "04_Entarisi" },
-            { no: "05", isim: "05_Deriko_üst" },
+            { no: "05", isim: "05_Deriko" },
             { no: "06", isim: "06_Söyle" },
             { no: "07", isim: "07_Goodbye_love" },
             { no: "08", isim: "08_Babayetu" },
@@ -258,6 +262,7 @@
             
             eggBtn.style.display = sarki.isim === "13_90lar" ? "flex" : "none";
             document.getElementById('easter-egg-btn2').style.display = sarki.isim === "12_Gunaydin_cocuklar" ? "flex" : "none";
+            document.getElementById('easter-egg-btn3').style.display = sarki.isim === "06_Söyle" ? "flex" : "none";
             
             mevcutZoom = 1.0;
             tamEkranAc();
@@ -375,6 +380,10 @@
             const pdfUrl = `Repertuar/${sarki.isim}/nota.pdf?v=${Date.now()}`;
             pdfYukle(pdfUrl);
             sesYukle(sarki);
+        }
+
+        function soyleEggAc() {
+            window.open('https://youtu.be/yfE339mAVlI', '_blank');
         }
 
         function hasanVideoAc() {
